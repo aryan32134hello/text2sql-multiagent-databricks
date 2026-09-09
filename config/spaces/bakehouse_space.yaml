@@ -1,0 +1,123 @@
+name: bakehouse
+description: Answers questions about bakery franchise sales, transactions, customers, and franchise locations, including revenue, order volume, product mix, and customer demographics.
+keywords:
+  - sales
+  - transaction
+  - revenue
+  - customer
+  - franchise
+  - order
+  - product
+  - payment
+  - purchase
+  - store
+  - location
+
+tables:
+  - full_name: samples.bakehouse.sales_transactions
+    description: One row per individual sales transaction at a franchise location.
+    columns:
+      - name: transactionID
+        data_type: bigint
+        description: Unique identifier for this transaction.
+      - name: customerID
+        data_type: bigint
+        description: References customerID in samples.bakehouse.sales_customers — the customer who made this purchase.
+      - name: franchiseID
+        data_type: bigint
+        description: References franchiseID in samples.bakehouse.sales_franchises — the franchise location where this transaction occurred.
+      - name: dateTime
+        data_type: timestamp
+        description: Date and time the transaction occurred.
+      - name: product
+        data_type: string
+        description: Name of the product purchased.
+      - name: quantity
+        data_type: bigint
+        description: Number of units purchased in this transaction.
+      - name: unitPrice
+        data_type: bigint
+        description: Price per unit for the product purchased.
+      - name: totalPrice
+        data_type: bigint
+        description: Total price for this transaction (quantity times unit price).
+      - name: paymentMethod
+        data_type: string
+        description: Method used to pay for the transaction, e.g. credit card, cash.
+      - name: cardNumber
+        data_type: bigint
+        description: Card number used for payment, if applicable.
+
+  - full_name: samples.bakehouse.sales_customers
+    description: One row per customer, with contact and demographic details.
+    columns:
+      - name: customerID
+        data_type: bigint
+        description: Unique identifier for this customer. Referenced by customerID in samples.bakehouse.sales_transactions.
+      - name: first_name
+        data_type: string
+        description: Customer's first name.
+      - name: last_name
+        data_type: string
+        description: Customer's last name.
+      - name: email_address
+        data_type: string
+        description: Customer's email address.
+      - name: phone_number
+        data_type: string
+        description: Customer's phone number.
+      - name: address
+        data_type: string
+        description: Customer's street address.
+      - name: city
+        data_type: string
+        description: Customer's city.
+      - name: state
+        data_type: string
+        description: Customer's state or region.
+      - name: country
+        data_type: string
+        description: Customer's country.
+      - name: continent
+        data_type: string
+        description: Customer's continent.
+      - name: postal_zip_code
+        data_type: bigint
+        description: Customer's postal or zip code.
+      - name: gender
+        data_type: string
+        description: Customer's gender.
+
+  - full_name: samples.bakehouse.sales_franchises
+    description: One row per franchise location.
+    columns:
+      - name: franchiseID
+        data_type: bigint
+        description: Unique identifier for this franchise. Referenced by franchiseID in samples.bakehouse.sales_transactions.
+      - name: name
+        data_type: string
+        description: Name of the franchise location.
+      - name: city
+        data_type: string
+        description: City where this franchise is located.
+      - name: district
+        data_type: string
+        description: District where this franchise is located.
+      - name: zipcode
+        data_type: string
+        description: Postal/zip code of this franchise's location.
+      - name: country
+        data_type: string
+        description: Country where this franchise is located.
+      - name: size
+        data_type: string
+        description: Size category of the franchise location.
+      - name: longitude
+        data_type: double
+        description: Longitude coordinate of the franchise location.
+      - name: latitude
+        data_type: double
+        description: Latitude coordinate of the franchise location.
+      - name: supplierID
+        data_type: bigint
+        description: References supplierID in samples.bakehouse.sales_suppliers — the supplier associated with this franchise.

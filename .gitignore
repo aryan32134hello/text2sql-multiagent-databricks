@@ -1,0 +1,11 @@
+# Notebooks (contain workspace-specific URLs)
+*.ipynb
+notebooks/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS/editor cruft
+.DS_Store
+.ipynb_checkpoints/
