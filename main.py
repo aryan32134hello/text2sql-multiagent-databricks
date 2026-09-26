@@ -21,7 +21,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten to your real Vercel domain once deployed
+    allow_origins=["https://text2sql-frontend.vercel.app"],  # tighten to your real Vercel domain once deployed
     allow_methods=["*"],
     allow_headers=["*"],
 )
