@@ -1,15 +1,13 @@
 import os
 from dotenv import load_dotenv
 
-# Load .env for local runs — on Render, real environment variables are already
-# set in the dashboard, so this call just does nothing there (no .env file exists).
 load_dotenv()
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "agents", "supervisor")))
 
 import mlflow
-mlflow.set_tracking_uri("databricks")  # requires DATABRICKS_HOST and DATABRICKS_TOKEN in env
+mlflow.set_tracking_uri("databricks")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +25,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Separate connection pool, just for the conversation log (distinct from the graphs' checkpointer pool) ---
 log_pool = ConnectionPool(conninfo=os.environ["POSTGRES_CONNECTION_STRING"], max_size=5, kwargs={"autocommit": True})
 
 def init_conversation_log():
@@ -39,9 +36,13 @@ def init_conversation_log():
                 question TEXT NOT NULL,
                 answer TEXT NOT NULL,
                 route TEXT,
+                sql_query TEXT,
+                sql_result TEXT,
                 created_at TIMESTAMPTZ DEFAULT now()
             )
         """)
+        conn.execute("ALTER TABLE conversation_log ADD COLUMN IF NOT EXISTS sql_query TEXT")
+        conn.execute("ALTER TABLE conversation_log ADD COLUMN IF NOT EXISTS sql_result TEXT")
 
 init_conversation_log()
 
@@ -53,12 +54,21 @@ class AskRequest(BaseModel):
 
 @app.post("/ask")
 def ask(request: AskRequest):
-    result = supervisor_agent.invoke(...)
+    result = supervisor_agent.invoke(
+        {
+            "question": request.question,
+            "conversation_id": request.conversation_id,
+            "route": None,
+            "final_answer": None,
+        },
+        config={"configurable": {"thread_id": request.conversation_id}}
+    )
 
     with log_pool.connection() as conn:
         conn.execute(
-            "INSERT INTO conversation_log (conversation_id, question, answer, route) VALUES (%s, %s, %s, %s)",
-            (request.conversation_id, request.question, result["final_answer"], result["route"])
+            "INSERT INTO conversation_log (conversation_id, question, answer, route, sql_query, sql_result) VALUES (%s, %s, %s, %s, %s, %s)",
+            (request.conversation_id, request.question, result["final_answer"], result["route"],
+             result.get("sql_query"), result.get("sql_result"))
         )
 
     return {
@@ -85,10 +95,10 @@ def list_conversations():
 def get_conversation(conversation_id: str):
     with log_pool.connection() as conn:
         rows = conn.execute(
-            "SELECT question, answer, route FROM conversation_log WHERE conversation_id = %s ORDER BY created_at",
+            "SELECT question, answer, route, sql_query, sql_result FROM conversation_log WHERE conversation_id = %s ORDER BY created_at",
             (conversation_id,)
         ).fetchall()
-    return [{"question": r[0], "answer": r[1], "route": r[2]} for r in rows]
+    return [{"question": r[0], "answer": r[1], "route": r[2], "sql_query": r[3], "sql_result": r[4]} for r in rows]
 
 
 @app.get("/health")
