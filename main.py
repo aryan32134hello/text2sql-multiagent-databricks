@@ -53,15 +53,7 @@ class AskRequest(BaseModel):
 
 @app.post("/ask")
 def ask(request: AskRequest):
-    result = supervisor_agent.invoke(
-        {
-            "question": request.question,
-            "conversation_id": request.conversation_id,
-            "route": None,
-            "final_answer": None,
-        },
-        config={"configurable": {"thread_id": request.conversation_id}}
-    )
+    result = supervisor_agent.invoke(...)
 
     with log_pool.connection() as conn:
         conn.execute(
@@ -69,7 +61,12 @@ def ask(request: AskRequest):
             (request.conversation_id, request.question, result["final_answer"], result["route"])
         )
 
-    return {"answer": result["final_answer"], "route": result["route"]}
+    return {
+        "answer": result["final_answer"],
+        "route": result["route"],
+        "sql_query": result.get("sql_query"),
+        "sql_result": result.get("sql_result"),
+    }
 
 
 @app.get("/conversations")

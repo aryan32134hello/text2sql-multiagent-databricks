@@ -200,7 +200,17 @@ Fix it. Return ONLY the corrected SQL, no explanation."""
 def format_answer(state: Text2SQLState):
     if state["validation_error"] is not None:
         return {"final_answer": "I couldn't successfully generate a working query for this question."}
-    return {"final_answer": f"Query: {state['sql_query']}\nResult: {state['sql_result']}"}
+
+    prompt = f"""Question: {state['question']}
+    SQL query used: {state['sql_query']}
+    Result: {state['sql_result']}
+    
+    Write one concise, natural-language sentence answering the question directly, using the actual number(s) from the result. Do not mention SQL or the query itself."""
+
+    response = llm.invoke(prompt)
+    summary = str(response.content).strip()
+
+    return {"final_answer": summary}
 
 
 graph = StateGraph(Text2SQLState)

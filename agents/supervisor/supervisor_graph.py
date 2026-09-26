@@ -27,12 +27,14 @@ llm = ChatGroq(model="openai/gpt-oss-20b")
 structured_llm_intent = llm.with_structured_output(IntentOutput, method="json_mode")
 
 
+
 class SupervisorState(TypedDict):
     question: str
     conversation_id: str
     route: Optional[str]
     final_answer: Optional[str]
-
+    sql_query: Optional[str]
+    sql_result: Optional[str]
 
 def classify_intent(state: SupervisorState):
     prompt = f"""You are classifying a user's message to decide how to handle it.
@@ -55,11 +57,12 @@ def respond_conversational(state: SupervisorState):
     prompt = f"""You are a helpful assistant for a data analytics system. The system can answer questions about bakery sales/transactions data and industrial machine maintenance data using SQL queries, and can investigate more complex "why" questions.
 
     Respond naturally and briefly to this message: {state['question']}
-    
+
     If the message asks what you can do, mention you can answer questions about sales/revenue/customers/franchises (bakehouse data) and machine failures/maintenance (maintenance data)."""
 
     response = llm.invoke(prompt)
-    return {"final_answer": str(response.content).strip()}
+    return {"final_answer": str(response.content).strip(), "sql_query": None, "sql_result": None}
+
 
 
 def call_text2sql(state: SupervisorState):
@@ -83,7 +86,11 @@ def call_text2sql(state: SupervisorState):
     thread_id = f"{state['conversation_id']}-text2sql"
     result = text2sql_agent.invoke(sub_state, config={"configurable": {"thread_id": thread_id}})
 
-    return {"final_answer": result["final_answer"]}
+    return {
+        "final_answer": result["final_answer"],
+        "sql_query": result["sql_query"],
+        "sql_result": str(result["sql_result"]),
+    }
 
 
 def call_rca(state: SupervisorState):
@@ -104,7 +111,7 @@ def call_rca(state: SupervisorState):
     thread_id = f"{state['conversation_id']}-rca"
     result = rca_agent.invoke(sub_state, config={"configurable": {"thread_id": thread_id}})
 
-    return {"final_answer": result["final_answer"]}
+    return {"final_answer": result["final_answer"], "sql_query": None, "sql_result": None}
 
 
 def route_from_intent(state: SupervisorState):

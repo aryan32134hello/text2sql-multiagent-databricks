@@ -61,7 +61,6 @@
     box-shadow: 0 2px 12px rgba(0,0,0,0.1);
   }
 
-  /* --- Sidebar --- */
   .sidebar {
     width: 240px;
     background: var(--sidebar-bg);
@@ -103,7 +102,6 @@
   .convoItem:hover { background: var(--hover); }
   .convoItem.active { background: var(--active); font-weight: 600; }
 
-  /* --- Main chat panel --- */
   .app {
     flex: 1;
     background: var(--panel-bg);
@@ -145,7 +143,6 @@
     padding: 10px 14px;
     border-radius: 14px;
     line-height: 1.4;
-    white-space: pre-wrap;
     font-size: 14px;
   }
 
@@ -176,6 +173,36 @@
     font-size: 13px;
     font-style: italic;
   }
+
+  .msg-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .action-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--input-border);
+    background: var(--panel-bg);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .action-btn:hover { background: var(--hover); }
+  .action-btn.active { background: var(--active); font-weight: 600; }
+
+  .detail-box {
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .detail-box.visible { display: block; }
 
   form {
     display: flex;
@@ -243,7 +270,6 @@
   let conversationId = localStorage.getItem("activeConversationId") || crypto.randomUUID();
   localStorage.setItem("activeConversationId", conversationId);
 
-  // --- Theme toggle ---
   function setTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     themeToggle.textContent = theme === "dark" ? "☀️ Light" : "🌙 Dark";
@@ -255,17 +281,73 @@
     setTheme(current === "dark" ? "light" : "dark");
   });
 
-  // --- Chat rendering ---
-  function addMessage(text, sender, routeTag) {
+  function addMessage(text, sender, routeTag, sqlQuery, sqlResult) {
     const el = document.createElement("div");
     el.className = "msg " + sender;
-    el.textContent = text;
+
+    const textEl = document.createElement("div");
+    textEl.textContent = text;
+    el.appendChild(textEl);
+
     if (routeTag) {
       const tag = document.createElement("span");
       tag.className = "route-tag";
       tag.textContent = "route: " + routeTag;
       el.appendChild(tag);
     }
+
+    if (sender === "assistant" && sqlQuery) {
+      const actions = document.createElement("div");
+      actions.className = "msg-actions";
+
+      const sqlBtn = document.createElement("button");
+      sqlBtn.className = "action-btn";
+      sqlBtn.textContent = "Show SQL";
+
+      const resultBtn = document.createElement("button");
+      resultBtn.className = "action-btn";
+      resultBtn.textContent = "Show Result";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "action-btn";
+      copyBtn.textContent = "Copy";
+
+      const sqlBox = document.createElement("div");
+      sqlBox.className = "detail-box";
+      sqlBox.textContent = sqlQuery;
+
+      const resultBox = document.createElement("div");
+      resultBox.className = "detail-box";
+      resultBox.textContent = sqlResult || "";
+
+      sqlBtn.addEventListener("click", () => {
+        sqlBox.classList.toggle("visible");
+        resultBox.classList.remove("visible");
+        sqlBtn.classList.toggle("active");
+        resultBtn.classList.remove("active");
+      });
+
+      resultBtn.addEventListener("click", () => {
+        resultBox.classList.toggle("visible");
+        sqlBox.classList.remove("visible");
+        resultBtn.classList.toggle("active");
+        sqlBtn.classList.remove("active");
+      });
+
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(text);
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => { copyBtn.textContent = "Copy"; }, 1500);
+      });
+
+      actions.appendChild(sqlBtn);
+      actions.appendChild(resultBtn);
+      actions.appendChild(copyBtn);
+      el.appendChild(actions);
+      el.appendChild(sqlBox);
+      el.appendChild(resultBox);
+    }
+
     chat.appendChild(el);
     chat.scrollTop = chat.scrollHeight;
   }
@@ -274,7 +356,6 @@
     chat.innerHTML = "";
   }
 
-  // --- Sidebar: load conversation list ---
   async function loadConversations() {
     try {
       const res = await fetch(BACKEND_URL + "/conversations");
@@ -293,7 +374,6 @@
     }
   }
 
-  // --- Switch to an existing conversation: fetch its history and render it ---
   async function switchConversation(id) {
     conversationId = id;
     localStorage.setItem("activeConversationId", id);
@@ -304,20 +384,20 @@
       const messages = await res.json();
       messages.forEach(m => {
         addMessage(m.question, "user");
-        addMessage(m.answer, "assistant", m.route);
+        addMessage(m.answer, "assistant", m.route, m.sql_query, m.sql_result);
       });
     } catch (err) {
       console.error("Failed to load conversation:", err);
     }
 
-    highlightActive();
+    document.querySelectorAll(".convoItem").forEach(el => {
+      el.classList.toggle("active", el.title && conversations_titles_match(el, id));
+    });
+    loadConversations();
   }
 
-  function highlightActive() {
-    document.querySelectorAll(".convoItem").forEach(el => el.classList.remove("active"));
-  }
+  function conversations_titles_match() { return false; } // placeholder, active state is refreshed by loadConversations() anyway
 
-  // --- New chat ---
   newChatBtn.addEventListener("click", () => {
     conversationId = crypto.randomUUID();
     localStorage.setItem("activeConversationId", conversationId);
@@ -326,7 +406,6 @@
     input.focus();
   });
 
-  // --- Ask ---
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const question = input.value.trim();
@@ -353,8 +432,8 @@
 
       const data = await response.json();
       thinkingEl.remove();
-      addMessage(data.answer, "assistant", data.route);
-      loadConversations(); // refresh sidebar so a brand-new conversation shows up with its title
+      addMessage(data.answer, "assistant", data.route, data.sql_query, data.sql_result);
+      loadConversations();
     } catch (err) {
       thinkingEl.remove();
       addMessage("Something went wrong: " + err.message, "assistant");
@@ -364,20 +443,16 @@
     }
   });
 
-  // --- On page load: restore the active conversation's history, and populate the sidebar ---
   (async function init() {
     await loadConversations();
     if (conversationId) {
-      // only load history if this conversation actually has messages already
       try {
         const res = await fetch(BACKEND_URL + "/conversations/" + conversationId);
         const messages = await res.json();
-        if (messages.length > 0) {
-          messages.forEach(m => {
-            addMessage(m.question, "user");
-            addMessage(m.answer, "assistant", m.route);
-          });
-        }
+        messages.forEach(m => {
+          addMessage(m.question, "user");
+          addMessage(m.answer, "assistant", m.route, m.sql_query, m.sql_result);
+        });
       } catch (err) {
         console.error(err);
       }
