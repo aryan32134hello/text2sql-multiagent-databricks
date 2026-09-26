@@ -1,0 +1,60 @@
+name: maintenance
+description: Answers questions about industrial machine operating conditions and failure events, including temperature, speed, torque, tool wear, and specific failure causes.
+keywords:
+  - machine
+  - failure
+  - maintenance
+  - tool wear
+  - torque
+  - temperature
+  - rotational speed
+  - breakdown
+  - overstrain
+  - overheating
+
+tables:
+  - full_name: dev_data.maintenance.ai_4_i_2020
+    description: One row per individual machine operating cycle/record, including sensor readings and whether a failure occurred.
+    columns:
+      - name: udi
+        data_type: bigint
+        description: Unique identifier for this record.
+      - name: product_id
+        data_type: string
+        description: Identifier for the specific product/unit being manufactured.
+      - name: type
+        data_type: string
+        description: Product quality variant — typically L (low), M (medium), or H (high).
+      - name: air_temperature_k
+        data_type: double
+        description: Ambient air temperature in Kelvin at the time of the record.
+      - name: process_temperature_k
+        data_type: double
+        description: Process temperature in Kelvin at the time of the record.
+      - name: rotational_speed_rpm
+        data_type: bigint
+        description: Rotational speed of the machine in revolutions per minute.
+      - name: torque_nm
+        data_type: double
+        description: Torque applied, measured in Newton-meters.
+      - name: tool_wear_min
+        data_type: bigint
+        description: Cumulative tool wear time in minutes.
+      - name: machine_failure
+        data_type: bigint
+        description: Whether any failure occurred on this record (1 = failure, 0 = no failure).
+      - name: twf
+        data_type: bigint
+        description: Tool Wear Failure flag — failure caused by the cutting tool wearing out (1 = yes, 0 = no).
+      - name: hdf
+        data_type: bigint
+        description: Heat Dissipation Failure flag — failure caused by insufficient heat dissipation (1 = yes, 0 = no).
+      - name: pwf
+        data_type: bigint
+        description: Power Failure flag — failure caused by insufficient or excessive power (1 = yes, 0 = no).
+      - name: osf
+        data_type: bigint
+        description: Overstrain Failure flag — failure caused by mechanical overstrain (1 = yes, 0 = no).
+      - name: rnf
+        data_type: bigint
+        description: Random Failure flag — failure not attributable to any specific process parameter (1 = yes, 0 = no).

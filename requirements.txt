@@ -1,0 +1,14 @@
+pyyaml
+voyageai
+numpy
+langgraph
+langchain
+mlflow
+databricks-sql-connector
+langchain-groq
+langgraph-checkpoint-postgres
+psycopg[binary]
+psycopg_pool
+fastapi
+uvicorn
+python-dotenv
